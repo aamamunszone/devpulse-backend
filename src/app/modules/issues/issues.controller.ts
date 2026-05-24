@@ -48,24 +48,55 @@ export const createIssue = async (
   }
 };
 
-// 2. Retrieve all issues from database
+// 2. Retrieve all issues with dynamic filtering and partial text search capabilities
 export const getAllIssues = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
-    const selectQuery = 'SELECT * FROM issues ORDER BY created_at DESC';
-    const result = await pool.query(selectQuery);
+    const { status, type, search } = req.query;
+
+    // Base SQL string
+    let sqlQuery = 'SELECT * FROM issues WHERE 1=1';
+    const queryParams: any[] = [];
+    let paramCounter = 1;
+
+    // Filter by explicit issue status state
+    if (status) {
+      sqlQuery += ` AND status = $${paramCounter}`;
+      queryParams.push(status);
+      paramCounter++;
+    }
+
+    // Filter by explicit category issue type
+    if (type) {
+      sqlQuery += ` AND type = $${paramCounter}`;
+      queryParams.push(type);
+      paramCounter++;
+    }
+
+    // Advanced case-insensitive text search matching title or description strings
+    if (search) {
+      sqlQuery += ` AND (title ILIKE $${paramCounter} OR description ILIKE $${paramCounter})`;
+      queryParams.push(`%${search}%`);
+      paramCounter++;
+    }
+
+    // Enforce descending sorting metrics on creation timeline
+    sqlQuery += ' ORDER BY created_at DESC';
+
+    const result = await pool.query(sqlQuery, queryParams);
 
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'All issues fetched successfully',
+      message: 'Issues filtered and retrieved successfully',
       data: result.rows,
     });
   } catch (error: any) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: error.message || 'An error occurred while fetching issues.',
+      message:
+        error.message || 'An error occurred while fetching filtered issues.',
     });
   }
 };
@@ -194,6 +225,40 @@ export const deleteIssue = async (
       message:
         error.message ||
         'An error occurred during dropping the database issue matrix.',
+    });
+  }
+};
+
+// 6. Generate optimized aggregate metric statistics for system dashboard counters
+export const getIssueStats = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    // Single-trip raw query containing aggregate operations to offload processing constraints
+    const statsQuery = `
+      SELECT 
+        COUNT(*)::INT as total_issues,
+        COUNT(CASE WHEN type = 'bug' THEN 1 END)::INT as total_bugs,
+        COUNT(CASE WHEN type = 'feature_request' THEN 1 END)::INT as total_feature_requests,
+        COUNT(CASE WHEN status = 'open' THEN 1 END)::INT as open_count,
+        COUNT(CASE WHEN status = 'in_progress' THEN 1 END)::INT as in_progress_count,
+        COUNT(CASE WHEN status = 'resolved' THEN 1 END)::INT as resolved_count
+      FROM issues
+    `;
+
+    const result = await pool.query(statsQuery);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Dashboard analytic metrics compiled successfully',
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message:
+        error.message || 'An error occurred while compiling system metrics.',
     });
   }
 };
