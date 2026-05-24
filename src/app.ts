@@ -1,9 +1,10 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
+import { AuthRoutes } from './app/modules/auth/auth.routes';
 
 const app: Application = express();
 
-// Middleware
+// Global Middlewares
 app.use(
   cors({
     origin: '*',
@@ -11,10 +12,12 @@ app.use(
     credentials: true,
   }),
 );
-
 app.use(express.json());
 
-// Basic test route
+// Application Routing Matrix
+app.use('/api/auth', AuthRoutes);
+
+// Root entry server status check
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
