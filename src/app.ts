@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import { AuthRoutes } from './app/modules/auth/auth.routes';
+import { IssueRoutes } from './app/modules/issues/issues.routes';
 
 const app: Application = express();
 
@@ -14,8 +15,9 @@ app.use(
 );
 app.use(express.json());
 
-// Application Routing Matrix
+// Application Routing Matrix Configurations
 app.use('/api/auth', AuthRoutes);
+app.use('/api/issues', IssueRoutes);
 
 // Root entry server status check
 app.get('/', (req: Request, res: Response) => {
