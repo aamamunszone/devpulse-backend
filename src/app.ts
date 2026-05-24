@@ -2,6 +2,8 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import { AuthRoutes } from './app/modules/auth/auth.routes';
 import { IssueRoutes } from './app/modules/issues/issues.routes';
+import globalErrorHandler from './app/middleware/globalErrorHandler';
+import notFound from './app/middleware/notFound';
 
 const app: Application = express();
 
@@ -26,5 +28,9 @@ app.get('/', (req: Request, res: Response) => {
     message: 'Welcome to DevPulse API Server',
   });
 });
+
+// Global Error Handler and Not Found Route Matcher (Must be at the absolute bottom)
+app.use(notFound);
+app.use(globalErrorHandler);
 
 export default app;
